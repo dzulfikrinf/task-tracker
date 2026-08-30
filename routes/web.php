@@ -20,7 +20,7 @@ Route::get('/dashboard', function () {
 
 Route::middleware(['auth'])->group(function () {
     Route::resource('projects', ProjectController::class)
-        ->except(['create', 'edit', 'update', 'destroy']);
+        ->except(['create', 'edit', 'update', 'destroy', 'show']);
 
     Route::resource('tasks', TaskController::class)
         ->only(['store', 'update', 'destroy']);
@@ -32,8 +32,8 @@ Route::middleware(['auth'])->group(function () {
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 
-    // pasang middleware project.owner khusus buat update & delete project
     Route::middleware(['project.owner'])->group(function () {
+        Route::get('/projects/{project}', [ProjectController::class, 'show'])->name('projects.show');
         Route::put('/projects/{project}', [ProjectController::class, 'update']);
         Route::delete('/projects/{project}', [ProjectController::class, 'destroy']);
     });
