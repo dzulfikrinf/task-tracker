@@ -1,59 +1,130 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# Task Tracker
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+Mini project management app untuk mengelola project dan task, dengan fitur assign task ke user lain. Dibangun sebagai latihan implementasi stack yang umum dipakai di web development modern (Laravel + PostgreSQL + Redis + React).
 
-## About Laravel
+## Fitur
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+- **Autentikasi** — register & login menggunakan Laravel Breeze
+- **CRUD Project** — user bisa membuat, melihat, dan menghapus project miliknya
+- **CRUD Task** — setiap project bisa punya banyak task, dengan status (`todo`, `in_progress`, `done`)
+- **Assign Task** — task bisa di-assign ke satu atau lebih user (relasi many-to-many)
+- **Authorization** — hanya pemilik project yang bisa melihat, mengubah, atau menghapus project miliknya (via custom middleware)
+- **Caching** — ringkasan jumlah task per status di-cache menggunakan Redis untuk mengurangi query berulang ke database
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+## Tech Stack
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+| Layer | Teknologi |
+|---|---|
+| Backend | Laravel 12 |
+| Database | PostgreSQL |
+| Cache & Session | Redis (via Predis) |
+| Frontend | React + Inertia.js |
+| Styling | Tailwind CSS |
+| Auth Scaffolding | Laravel Breeze |
 
-## Learning Laravel
+## Struktur Database
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework. You can also check out [Laravel Learn](https://laravel.com/learn), where you will be guided through building a modern Laravel application.
+```
+users
+├── id, name, email, password
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+projects
+├── id, user_id (FK → users), name, description
 
-## Laravel Sponsors
+tasks
+├── id, project_id (FK → projects), title, description, status
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the [Laravel Partners program](https://partners.laravel.com).
+task_user (pivot)
+├── task_id (FK → tasks), user_id (FK → users)
+```
 
-### Premium Partners
+**Relasi:**
+- `User` hasMany `Project`
+- `Project` hasMany `Task`
+- `Task` belongsToMany `User` (melalui `task_user`, untuk assignee)
 
-- **[Vehikl](https://vehikl.com)**
-- **[Tighten Co.](https://tighten.co)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Curotec](https://www.curotec.com/services/technologies/laravel)**
-- **[DevSquad](https://devsquad.com/hire-laravel-developers)**
-- **[Redberry](https://redberry.international/laravel-development)**
-- **[Active Logic](https://activelogic.com)**
+## Middleware
 
-## Contributing
+Custom middleware `project.owner` (`app/Http/Middleware/EnsureUserOwnsProject.php`) memastikan hanya pemilik project yang bisa mengakses route `show`, `update`, dan `destroy` pada project tertentu. User lain yang mencoba mengakses akan mendapat response `403 Forbidden`.
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+## Redis Caching
 
-## Code of Conduct
+Ringkasan jumlah task per status (`todo`, `in_progress`, `done`) di-cache per project selama 5 menit menggunakan `Cache::remember()`. Cache otomatis di-invalidate (`Cache::forget()`) setiap kali ada task yang dibuat, diubah, atau dihapus di project tersebut — sehingga data yang ditampilkan tetap akurat tanpa perlu query berulang.
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+## Setup & Instalasi
 
-## Security Vulnerabilities
+### Requirements
+- PHP >= 8.2
+- Composer
+- Node.js & npm
+- PostgreSQL
+- Redis (atau Memurai untuk Windows)
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+### Langkah Instalasi
 
-## License
+```bash
+# 1. Clone repository
+git clone <repo-url>
+cd task-tracker
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+# 2. Install dependency PHP & JS
+composer install
+npm install
+
+# 3. Copy environment file
+cp .env.example .env
+php artisan key:generate
+
+# 4. Sesuaikan koneksi database & Redis di .env
+DB_CONNECTION=pgsql
+DB_HOST=127.0.0.1
+DB_PORT=5432
+DB_DATABASE=task_tracker
+DB_USERNAME=postgres
+DB_PASSWORD=
+
+CACHE_STORE=redis
+SESSION_DRIVER=redis
+REDIS_CLIENT=predis
+REDIS_HOST=127.0.0.1
+REDIS_PORT=6379
+
+# 5. Jalankan migration
+php artisan migrate
+
+# 6. Jalankan development server
+npm run dev
+php artisan serve
+```
+
+Akses aplikasi di `http://127.0.0.1:8000`.
+
+## Alur Penggunaan
+
+1. Register akun baru / login
+2. Buat project baru dari halaman **Projects**
+3. Buka detail project, tambahkan beberapa task
+4. Ubah status task (todo → in progress → done) — ringkasan otomatis ter-update
+5. Assign task ke user lain melalui form assign
+
+## Catatan Pengembangan
+
+Project ini dibangun secara bertahap dengan alur Git berikut, satu branch per fitur:
+
+```
+feature/setup-db          → migration & schema database
+feature/models-relasi      → model & relasi Eloquent
+feature/middleware-auth    → middleware authorization
+feature/api-controller     → controller & routing RESTful
+feature/redis-cache        → implementasi caching
+feature/frontend-pages     → halaman React/Inertia
+fix/project-owner-show-route → perbaikan proteksi route show
+```
+
+Setiap branch di-merge ke `main` melalui pull request.
+
+## Potensi Pengembangan Selanjutnya
+
+- Validasi assign task agar hanya bisa dilakukan ke user yang memang tergabung dalam project
+- Unit test untuk controller dan middleware
+- Fitur notifikasi saat task di-assign ke user
