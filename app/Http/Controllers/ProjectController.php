@@ -38,6 +38,7 @@ class ProjectController extends Controller
 
         return Inertia::render('Projects/Show', [
             'project' => $project,
+            'summary' => $project->getTaskSummary(),
         ]);
     }
 

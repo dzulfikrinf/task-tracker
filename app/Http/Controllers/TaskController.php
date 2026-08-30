@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Task;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 
 class TaskController extends Controller
 {
@@ -15,7 +16,8 @@ class TaskController extends Controller
             'description' => 'nullable|string',
         ]);
 
-        Task::create($validated);
+        $task = Task::create($validated);
+        Cache::forget("project.{$task->project_id}.summary");
 
         return redirect()->back();
     }
@@ -29,13 +31,16 @@ class TaskController extends Controller
         ]);
 
         $task->update($validated);
+        Cache::forget("project.{$task->project_id}.summary");
 
         return redirect()->back();
     }
 
     public function destroy(Task $task)
     {
+        $projectId = $task->project_id;
         $task->delete();
+        Cache::forget("project.{$projectId}.summary");
 
         return redirect()->back();
     }
